@@ -14,11 +14,13 @@ TAG_FREQAI=${TAG}_freqai
 TAG_FREQAI_RL=${TAG_FREQAI}rl
 TAG_FREQAI_TORCH=${TAG_FREQAI}torch
 TAG_PI="${TAG}_pi"
+TAG_PG=${TAG}_pg
 
 TAG_ARM=${TAG}_arm
 TAG_PLOT_ARM=${TAG_PLOT}_arm
 TAG_FREQAI_ARM=${TAG_FREQAI}_arm
 TAG_FREQAI_RL_ARM=${TAG_FREQAI_RL}_arm
+TAG_PG_ARM=${TAG_PG}_arm
 
 echo "Running for ${TAG}"
 
@@ -46,12 +48,15 @@ fi
 docker build --build-arg sourceimage=freqtrade --build-arg sourcetag=${TAG_ARM} -t freqtrade:${TAG_PLOT_ARM} -f docker/Dockerfile.plot .
 docker build --build-arg sourceimage=freqtrade --build-arg sourcetag=${TAG_ARM} -t freqtrade:${TAG_FREQAI_ARM} -f docker/Dockerfile.freqai .
 docker build --build-arg sourceimage=freqtrade --build-arg sourcetag=${TAG_FREQAI_ARM} -t freqtrade:${TAG_FREQAI_RL_ARM} -f docker/Dockerfile.freqai_rl .
+docker build --build-arg sourceimage=freqtrade --build-arg sourcetag=${TAG_ARM} -t freqtrade:${TAG_PLOT_ARM} -f docker/Dockerfile.plot .
+docker build --build-arg sourceimage=freqtrade --build-arg sourcetag=${TAG_ARM} -t freqtrade:${TAG_PG_ARM} -f docker/Dockerfile.pg .
 
 # Tag image for upload and next build step
 docker tag freqtrade:$TAG_ARM ${CACHE_IMAGE}:$TAG_ARM
 docker tag freqtrade:$TAG_PLOT_ARM ${CACHE_IMAGE}:$TAG_PLOT_ARM
 docker tag freqtrade:$TAG_FREQAI_ARM ${CACHE_IMAGE}:$TAG_FREQAI_ARM
 docker tag freqtrade:$TAG_FREQAI_RL_ARM ${CACHE_IMAGE}:$TAG_FREQAI_RL_ARM
+docker tag freqtrade:$TAG_PG_ARM ${CACHE_IMAGE}:$TAG_PG_ARM
 
 # Run backtest
 docker run --rm -v $(pwd)/config_examples/config_bittrex.example.json:/freqtrade/config.json:ro -v $(pwd)/tests:/tests freqtrade:${TAG_ARM} backtesting --datadir /tests/testdata --strategy-path /tests/strategy/strats/ --strategy StrategyTestV3
@@ -66,6 +71,7 @@ docker images
 docker push ${CACHE_IMAGE}:$TAG_PLOT_ARM
 docker push ${CACHE_IMAGE}:$TAG_FREQAI_ARM
 docker push ${CACHE_IMAGE}:$TAG_FREQAI_RL_ARM
+docker push ${CACHE_IMAGE}:$TAG_PG_ARM
 docker push ${CACHE_IMAGE}:$TAG_ARM
 
 # Create multi-arch image
@@ -85,6 +91,9 @@ docker manifest push -p ${IMAGE_NAME}:${TAG_FREQAI}
 docker manifest create ${IMAGE_NAME}:${TAG_FREQAI_RL} ${CACHE_IMAGE}:${TAG_FREQAI_RL} ${CACHE_IMAGE}:${TAG_FREQAI_RL_ARM}
 docker manifest push -p ${IMAGE_NAME}:${TAG_FREQAI_RL}
 
+docker manifest create ${IMAGE_NAME}:${TAG_PG} ${CACHE_IMAGE}:${TAG_PG} ${CACHE_IMAGE}:${TAG_PG_ARM}
+docker manifest push -p ${IMAGE_NAME}:${TAG_PG}
+
 # Create special Torch tag - which is identical to the RL tag.
 docker manifest create ${IMAGE_NAME}:${TAG_FREQAI_TORCH} ${CACHE_IMAGE}:${TAG_FREQAI_RL} ${CACHE_IMAGE}:${TAG_FREQAI_RL_ARM}
 docker manifest push -p ${IMAGE_NAME}:${TAG_FREQAI_TORCH}
@@ -101,6 +110,7 @@ crane copy ${IMAGE_NAME}:${TAG_FREQAI_RL} ${GHCR_IMAGE_NAME}:${TAG_FREQAI_RL}
 crane copy ${IMAGE_NAME}:${TAG_FREQAI_RL} ${GHCR_IMAGE_NAME}:${TAG_FREQAI_TORCH}
 crane copy ${IMAGE_NAME}:${TAG_FREQAI} ${GHCR_IMAGE_NAME}:${TAG_FREQAI}
 crane copy ${IMAGE_NAME}:${TAG_PLOT} ${GHCR_IMAGE_NAME}:${TAG_PLOT}
+crane copy ${IMAGE_NAME}:${TAG_PG} ${GHCR_IMAGE_NAME}:${TAG_PG}
 crane copy ${IMAGE_NAME}:${TAG} ${GHCR_IMAGE_NAME}:${TAG}
 
 # Tag as latest for develop builds
